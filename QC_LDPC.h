@@ -45,8 +45,6 @@ public:
 
 	void B2H();
 	void maskingH();
-	
-
 	vector<bool>rowMask;
 	vector<bool>colMask;
 	vector<bool>maskBits;

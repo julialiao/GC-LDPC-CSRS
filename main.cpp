@@ -6,7 +6,7 @@
 #include <vector>
 #include <time.h>
 #include "SIM_PAR.h"
-#include "GC_RS_LDPC.h"
+#include "GC_LDPC.h"
 #include "COMM_BOX.h"
 
 using namespace std;
@@ -15,7 +15,7 @@ int main() {
 	// initialize random seed
 	srand(time(NULL));
 
-	GC_RS_LDPC gcLdpc;
+	GC_LDPC gcLdpc;
 	COMM_BOX commBox;
 
 	vector<float> snrRange;
@@ -55,12 +55,13 @@ int main() {
 
 	vector< float > iteratoinCnt;
 	
-	double vecSNR[10] =  { 3.6, 3.7,3.8, 3.9, 4, 4.1,4.2,4.3,4.4, 4.5};
+	double vecSNR[9] =  {3.8,3.9,4, 4.1,4.2,4.3, 4.35,4.4, 4.5};
 
-	for (int snrIdx = 0; snrIdx <10; snrIdx ++ ) {
-		double SNR = vecSNR[snrIdx] + 10*log10(rate);
-		cout << "SNR = " << SNR <<endl;
+	for (int snrIdx = 0; snrIdx <9; snrIdx ++ ) {
+		
+		double SNR = vecSNR[snrIdx] + 10*log10(rate);		
 		cout << "Eb/No = " << vecSNR[snrIdx] << endl;
+		cout << "SNR = " << SNR << endl;
 		unsigned uNoErrorBits = 0;
 		unsigned cNoErrorBits = 0;
 		unsigned pktSim = 1E7;
@@ -98,7 +99,7 @@ int main() {
 			
 			vector<bool> decodedCodeword;
 
-#ifdef INTERLACED_MINSUM
+#ifdef INTERLACE_MINSUM
 			gcLdpc.interlacedMinsum(rx, decodedCodeword);
 #else
 			gcLdpc.minSumDecode(rx, decodedCodeword);
@@ -136,7 +137,7 @@ int main() {
 		uBER.push_back((float)uNoErrorBits / (float)pkNum / (float)gcLdpc.N);
 		cBER.push_back((float)cNoErrorBits / (float)pkNum / (float)K);
 
-		cout << vecSNR[snrIdx] << "\t" << (float)uNoErrorBits / (float)pkNum / (float)gcLdpc.N << "\t" << (float)cNoErrorBits / (float)pkNum / (float)K
+		cout << SNR << "\t" << (float)uNoErrorBits / (float)pkNum / (float)gcLdpc.N << "\t" << (float)cNoErrorBits / (float)pkNum / (float)K
 			<< "\t" << (float)nErrorPkt / (float)pkNum << "\t"<< pkNum << endl;
 
 		ofs << SNR << "\t" << vecSNR[snrIdx] << "\t" << (float)uNoErrorBits / (float)pkNum / (float)gcLdpc.N << "\t" << (float)cNoErrorBits / (float)pkNum / (float)K

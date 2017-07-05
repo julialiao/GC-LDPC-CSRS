@@ -196,7 +196,7 @@ void QC_LDPC::generatorMatrixGen() {
 	vector<int> idxZ;
 	nzIdxG.resize(M);
 
-	int ss = 0;
+	
 	for (int i = 0; i < M; ++i) {
 		int s1 = accumulate(H0[i].begin(), H0[i].end(), 0);
 		if(s1 < 2) cout << i << ": " << s1 << endl;
@@ -204,7 +204,6 @@ void QC_LDPC::generatorMatrixGen() {
 			idxZ.push_back(i);
 		//	cout << i << ",";
 		}
-		ss +=  accumulate(H0[i].begin(), H0[i].end(), 0)==0;
 	}
 
 	if (idxZ.size() > 0) {
@@ -251,16 +250,13 @@ void QC_LDPC::generatorMatrixGen() {
 
  
 	dataLength = N - M + idxZ.size();
-	#ifdef N_MASK_COL
-	//dataLength -= N_MASK_COL;
-	#endif
 
 	maskBits.resize(dataLength,false);
 	int startIdx = N-dataLength;
 	for(int i=0; i < dataLength; ++i){
 		 maskBits[i] = !colMask[columnPermIdx[startIdx+i]];
 		 
-		cout << i << "," << columnPermIdx[startIdx+i] << "," << maskBits[i] <<"," << colMask[startIdx+i] << endl;
+	//	cout << i << "," << columnPermIdx[startIdx+i] << "," << maskBits[i] <<"," << colMask[startIdx+i] << endl;
 	}
 
 }
