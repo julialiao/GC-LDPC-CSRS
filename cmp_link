@@ -1,0 +1,1 @@
+g++ main.cpp QC_LDPC.cpp GC_RS_LDPC.cpp  COMM_BOX.cpp -o test -O2  -std=gnu++11
