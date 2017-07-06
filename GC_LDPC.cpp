@@ -214,6 +214,20 @@ void GC_LDPC::Type1BaseMatrixGen(){
 			baseH[iOffset+s][j]=R0[s][j];
 		}
 	}
+#ifdef GLOBAL_ROW_SPLIT
+	int orgSize = baseH.size();
+	baseH.resize(baseH.size()+1);
+	for(int s = 0; s < GLOBAL_ROW_SPLIT;++s){
+		baseH[orgSize+s] = baseH[orgSize-GLOBAL_ROW_SPLIT+s];
+	       for(int j=1; j < baseH[0].size();j+=2){
+	       	baseH[orgSize+s][j] = -1;
+		baseH[orgSize-GLOBAL_ROW_SPLIT+s][j-1] = -1;
+	       }	
+	}
+	nRowBlockH += GLOBAL_ROW_SPLIT;
+	M += (GLOBAL_ROW_SPLIT*CPM_SIZE);
+#endif
+
 	
 //	cout << "The base matris is:" << endl; 
 	for(int i=0; i < baseH.size();++i){
