@@ -19,15 +19,7 @@ void QC_LDPC::maskingH(){
 	
 
 #ifdef N_MASK_ROW
-	#ifndef RANDOM_ROW_MASK
-	 
-	for(int i=0; i < N_MASK_ROW; i++){
-		rowMask[i] = true;
-		 
-	}
-
-	cout << "dropping first " <<  accumulate(rowMask.begin(),rowMask.end(),0 ) << " rows" << endl;
-	#else
+	#ifdef RANDOM_ROW_MASK
 
 	std::random_device rd;  //Will be used to obtain a seed for the random number engine
     std::mt19937 generator(rd()); 
@@ -42,21 +34,47 @@ void QC_LDPC::maskingH(){
 		}		
 		
 	}
-
-
 	cout << "randomly drop " <<  accumulate(rowMask.begin(),rowMask.end(),0 ) << " rows" << endl;
+	
+	#else
+#ifdef EVEN_LOCAL_ROW_MASK  // evenly drop the first rows of each local parts
+
+	int nDropLocals = (int)(float)N_MASK_ROW/(float)BASE_MATRIX_P;
+	int iOffset = 0;
+	int nDrops = 0;
+	int baseHd1[BASE_MATRIX_P] = BASE_MATRIX_D1;
+	for(int p=0; p <BASE_MATRIX_P-1; ++p ){
+		for(int i=0; i < nDropLocals; ++i){
+			
+			rowMask[i+iOffset] = true;
+			++nDrops;
+		}
+		iOffset += (baseHd1[p]*BASE_MATRIX_PxL);
+	}
+	int i = iOffset;
+	while(nDrops < N_MASK_ROW){
+		rowMask[i] = true;
+		++nDrops;
+		++i;
+	}
+	//cout << nDropLocals <<endl;
+	cout << "evenly dropping first (locals)" <<  accumulate(rowMask.begin(),rowMask.end(),0 ) << " rows" << endl;		
+#else
+	for(int i=0; i < N_MASK_ROW; i++){
+		rowMask[i] = true;
+		 
+	}
+
+	cout << "dropping first " <<  accumulate(rowMask.begin(),rowMask.end(),0 ) << " rows" << endl;		
+
+#endif
+	
 	#endif
 #endif
 
 #ifdef N_MASK_COL
 
-	#ifndef RANDOM_COL_MASK
-	for(int i=0; i < N_MASK_COL; ++i){
-		colMask[N-1-i] = true;
-	}
-	cout << "drop last " <<  accumulate(colMask.begin(),colMask.end(),0 ) << " columns" << endl;
-	#else
-
+	#ifdef RANDOM_COL_MASK
 	std::random_device rd2;  //Will be used to obtain a seed for the random number engine
     std::mt19937 generator2(rd2()); 
 	//std::default_random_engine generator;
@@ -70,9 +88,39 @@ void QC_LDPC::maskingH(){
 		}		
 		
 	}
-
-
 	cout << "randomly drop " <<  accumulate(colMask.begin(),colMask.end(),0 ) << " columns" << endl;
+	
+	#else
+#ifdef EVEN_LOCAL_COL_MASK
+	int nDropLocal = (int)(float)N_MASK_COL/(float)BASE_MATRIX_P;
+	int jOffset = 0;
+	int nDrop = 0;
+	int baseJOffset[BASE_MATRIX_P] = BASE_MATRIX_COL_OFFSET;
+	for(int p=0; p <BASE_MATRIX_P-1; ++p ){
+		for(int j=0; j < nDropLocal; ++j){
+			
+			colMask[j+jOffset] = true;
+			++nDrop;
+		}
+		jOffset += BASE_MATRIX_P*BASE_MATRIX_PxL;
+	}
+	int j =  0;
+	while(nDrop < N_MASK_COL){
+		colMask[N-1-j] = true;
+		++nDrop;
+		++j;
+	}
+
+	//cout << nDropLocal << endl;
+	cout << "evenly drop  " <<  accumulate(colMask.begin(),colMask.end(),0 ) << " columns" << endl;
+	
+#else
+	for(int i=0; i < N_MASK_COL; ++i){
+		colMask[N-1-i] = true;
+	}
+	cout << "drop last " <<  accumulate(colMask.begin(),colMask.end(),0 ) << " columns" << endl;
+#endif
+	
 	#endif
 #endif
 
@@ -260,7 +308,7 @@ void QC_LDPC::generatorMatrixGen() {
 	for(int i=0; i < dataLength; ++i){
 		 maskBits[i] = !colMask[columnPermIdx[startIdx+i]];
 		 
-		cout << i << "," << columnPermIdx[startIdx+i] << "," << maskBits[i] <<"," << colMask[startIdx+i] << endl;
+		//cout << i << "," << columnPermIdx[startIdx+i] << "," << maskBits[i] <<"," << colMask[startIdx+i] << endl;
 	}
 
 }

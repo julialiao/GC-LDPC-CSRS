@@ -87,6 +87,14 @@ void GC_RS_LDPC::GC_RS_BaseMatrixGen(){
 		}
 				 
 #endif
+#ifdef BASE_MATRIX_GLOBAL_DOWNSAMPLE
+			 
+		for (int j = i; j < nColBlockH; j+= BASE_MATRIX_GLOBAL_DOWNSAMPLE) {
+			
+			baseH[iOffset + i][j]= -1;	 
+		}	
+
+#endif
 	}
 
 
