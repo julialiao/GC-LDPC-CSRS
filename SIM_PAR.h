@@ -38,8 +38,11 @@
 #define ROW_SHUFFLE
 //#define INTERLACED_MINSUM
 
-#define HARD_DECODE
-#define TWO_BIT_SOFT
+//#define HARD_DECODE
+//#define TWO_BIT_SOFT
+//#define FIX_POINT_EN
+//#define Q_BIT 2
+//#define SOFT_Q_BIT
 
 
 #define CNU_MAX_LLR_ABS 128

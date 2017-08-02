@@ -27,6 +27,9 @@ public:
 	double rand_normal(double mean, double stddev);
 
 	//const float sigMag = sqrt(0.5);
+
+	void hardInputGen(vector<float>& in, vector<int>& out, int qBit);
+	void softQBitGen(vector<float>& in, vector<float>& out, int qBit);
 };
 
 #endif

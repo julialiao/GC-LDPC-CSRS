@@ -102,7 +102,7 @@ void QC_LDPC::maskingH(){
 			colMask[j+jOffset] = true;
 			++nDrop;
 		}
-		jOffset += BASE_MATRIX_P*BASE_MATRIX_PxL;
+		jOffset += BASE_MATRIX_LAMBDA*BASE_MATRIX_PxL;
 	}
 	int j =  0;
 	while(nDrop < N_MASK_COL){
@@ -391,8 +391,7 @@ bool QC_LDPC::checkSumH(vector<bool> & cword) {
 }
 void QC_LDPC::initDecoder(){
 	
-	
-	
+#ifndef FIX_POINT_EN
 	
 	memC2V.resize(M);
 	int cnIdx = 0;
@@ -401,37 +400,39 @@ void QC_LDPC::initDecoder(){
 		for(int k=0; k < CPM_SIZE; ++k){
 			memC2V[cnIdx].resize(degree);
 			for(int d=0; d < degree; ++d){
-				memC2V[cnIdx][d] = 0.0;
+				memC2V[cnIdx][d] = 0.;
 			}
 			cnIdx++;
 		}
 	}
 	
-/*	int M1 = BASE_MATRIX_D1*BASE_MATRIX_P*CPM_SIZE;
 
-	for(int i=0; i <M1 ; ++i){
-		memC2V[i].resize(BASE_MATRIX_LAMBDA);
-		for(int j=0; j < BASE_MATRIX_LAMBDA; ++j){
-			memC2V[i][j] = 0.0;
-		}
-		
-	}
-
-	for(int i = M1; i < M; ++i){
-		memC2V[i].resize(BASE_MATRIX_PxL);
-		for(int j=0; j < BASE_MATRIX_PxL; ++j){
-			memC2V[i][j] = 0.0;
-		}
-	}
-	
-	*/ 
 	memSumLLRV2C.resize(N);
 	for(int j=0; j < N; ++j){
-		memSumLLRV2C[j] = 0.0;
+		memSumLLRV2C[j] = 0.;
 	}
  
+#else
 
+	memC2V_i.resize(M);
+	int cnIdx = 0;
+	for(int i=0; i < baseH.size(); ++i){
+		int degree = cnDegree[i];
+		for(int k=0; k < CPM_SIZE; ++k){
+			memC2V_i[cnIdx].resize(degree);
+			for(int d=0; d < degree; ++d){
+				memC2V_i[cnIdx][d] = 0;
+			}
+			cnIdx++;
+		}
+	}
 	
+
+	memSumLLRV2C_i.resize(N);
+	for(int j=0; j < N; ++j){
+		memSumLLRV2C_i[j] = 0;
+	}
+#endif
 
 }
 
@@ -568,6 +569,7 @@ void QC_LDPC::minSumCNU(vector<float * >& sumLLRV2C, vector<float> &mC2V, vector
 	for(int i=0; i < cnuDegree; ++i){
 		if(!bitMsk[i]){
 			absLLR[i] = fabs(*sumLLRV2C[i] - mC2V[i]);
+			absLLR[i] > CNU_MAX_LLR_ABS ? CNU_MAX_LLR_ABS : absLLR[i];
 			sgnLLR[i] = (*sumLLRV2C[i] - mC2V[i]) < 0;
 			sgn ^= sgnLLR[i];
 		}
@@ -615,6 +617,7 @@ void QC_LDPC::minSumCNU(vector<float * >& sumLLRV2C, vector<float> &mC2V, vector
 		min2 *= CNU_SCALE2;
 	}
 	
+
 	 
 	for(int i=0; i < cnuDegree; ++i){
 		if(!bitMsk[i]){
@@ -665,4 +668,239 @@ void QC_LDPC::VNU(int vIndex, float llr, int j){
 
 }
 
+
+
+void QC_LDPC::minSumDecode(vector<int> & llr, vector<bool> &decoded){
+
+	// initialize
+
+	initDecoder();
+	memSumLLRV2C_i = llr;
+	vector<bool> cword(N);
+	//iterative decoding
+
+	iterationCnt = MAX_DECODE_ITERATION;
+	
+	for(int itr=0; itr < MAX_DECODE_ITERATION; ++itr){
+
+		//local check node update	
+		int cnIdx = 0;		
+		for(int i=0; i < nLocalRowBlk; ++i){
+			for(int k=0; k <CPM_SIZE; ++k){				
+				int vOffset = 0;
+								 
+				vector<int *> sumLLRV2C;
+				vector<bool> bitMask;
+				for(int j=0; j < baseH[i].size();++j){
+
+					if(baseH[i][j]>=0){
+						int vnIdx = vOffset + (baseH[i][j] + k)%CPM_SIZE;
+						 
+						sumLLRV2C.push_back(&memSumLLRV2C_i[vnIdx]);
+						bitMask.push_back(colMask[vnIdx]);
+						 
+
+					}	
+					vOffset += CPM_SIZE;			
+				}
+
+				if(!rowMask[cnIdx]){
+					minSumCNU(sumLLRV2C, memC2V_i[cnIdx],bitMask);
+				}
+
+
+				++cnIdx;
+			}
+			
+		}// if i
+
+		// global check node update
+		for(int i=nLocalRowBlk; i <baseH.size(); ++i ){
+			for(int k=0; k <CPM_SIZE; ++k){	
+				int vOffset = 0;
+				
+				vector<int *> sumLLRV2C;//(BASE_MATRIX_PxL);
+				vector<bool> bitMask;
+				for(int j=0; j < baseH[i].size(); ++j){
+					if(baseH[i][j]>=0){
+						int vnIdx = vOffset + (baseH[i][j] + k)%CPM_SIZE;
+						
+						sumLLRV2C.push_back(&memSumLLRV2C_i[vnIdx]);
+						bitMask.push_back(colMask[vnIdx]);
+						 
+						 
+					}
+					vOffset += CPM_SIZE;	
+				}
+				 
+				if(!rowMask[cnIdx]){
+					minSumCNU(sumLLRV2C, memC2V_i[cnIdx],bitMask);
+				}
+				++cnIdx;
+			}
+			
+		}
+		
+	
+		//var. node update (accumulation) and decode
+		int vnIdx = 0;
+		
+		for(int j=0; j <nColBlockH; ++j ){
+			for(int k = 0; k < CPM_SIZE; ++k){
+#ifndef ROW_SHUFFLE
+			if(!colMask[vnIdx])
+				VNU(vnIdx,llr[vnIdx],j);	
+#endif
+ 	
+			if(!colMask[vnIdx]){
+				cword[vnIdx] = (memSumLLRV2C_i[vnIdx]< 0);	
+			}
+			else{
+				cword[vnIdx] = 0;
+			}
+
+ 			++vnIdx;
+			}
+		}
+	/*	
+		if (itr > 10) {
+			cout << 10;
+			for (int i = 0; i < N; ++i) {
+				if (llr[i] * memSumLLRV2C[i] < 0) {
+					cout << i << "," << llr[i] << "," << memSumLLRV2C[i] << endl;
+				}
+			}
+		}*/
+		// parity check
+		if( checkSumH(cword)==false){
+			//cout << "early termination @ " << itr<< endl;
+			iterationCnt = itr+1;
+			break;
+		}
+
+	}
+
+	
+
+	// rearrange the data
+	decoded.resize(dataLength);
+	int startIdx = N-dataLength;
+	for(int j=0; j < dataLength; ++j){
+		decoded[j] = cword[columnPermIdx[j+startIdx]];
+	}
+
+
+}
+void QC_LDPC::minSumCNU(vector<int * >& sumLLRV2C, vector<int> &mC2V, vector<bool> bitMsk){
+
+	
+	// abs and sign
+	bool sgn = 0;
+	unsigned cnuDegree = sumLLRV2C.size();
+	vector <int> absLLR(cnuDegree);
+	vector <bool> sgnLLR(cnuDegree);
+	for(int i=0; i < cnuDegree; ++i){
+		if(!bitMsk[i]){
+			absLLR[i] = fabs(*sumLLRV2C[i] - mC2V[i]);
+			absLLR[i] > CNU_MAX_LLR_ABS ? CNU_MAX_LLR_ABS : absLLR[i];
+			sgnLLR[i] = (*sumLLRV2C[i] - mC2V[i]) < 0;
+			sgn ^= sgnLLR[i];
+		}
+		else{
+			absLLR[i] = CNU_MAX_LLR_ABS;
+			sgnLLR[i] = 0;
+		}
+		
+	}
+
+	//assume degree > 2
+	int min1 = absLLR[0];
+	int min2 = absLLR[1];
+	unsigned idxMin1 = 0;
+	
+	if(min2 < min1){
+		int tmp = min1;
+		min1 = min2;
+		min2 = tmp;
+		idxMin1 = 1;
+		 
+		
+	}
+
+	for(int i=2; i < cnuDegree; ++i){
+		if(absLLR[i] < min2){
+			min2 = absLLR[i];
+			 
+			if(absLLR[i]<min1){
+				int tmp = min1;
+				min1 = absLLR[i];
+				min2 = tmp;				 
+				idxMin1 = i;				 
+			}
+		}
+	}
+	// scaling factor = 0.5
+	min1 >> 2;
+	min2 >> 1;
+
+/*
+	if (cnuDegree > CNU_DEG_TH) {
+		min1 *= CNU_SCALE1;
+		min2 *= CNU_SCALE1;
+	}
+	else {
+		min1 *= CNU_SCALE2;
+		min2 *= CNU_SCALE2;
+	}
+*/	
+
+	 
+	for(int i=0; i < cnuDegree; ++i){
+		if(!bitMsk[i]){
+	#ifdef ROW_SHUFFLE 
+			if(i!=idxMin1){
+				int tmp = sgnLLR[i]^sgn ? -min1 : min1;
+				*sumLLRV2C[i] = *sumLLRV2C[i] - mC2V[i] + tmp;
+				mC2V[i] = tmp;
+			}
+			else{
+				int tmp = sgnLLR[i]^sgn ? -min2 : min2;
+				*sumLLRV2C[i] = *sumLLRV2C[i] - mC2V[i] + tmp;
+				mC2V[i] = tmp;
+			}
+			*sumLLRV2C[i] = *sumLLRV2C[i] > CNU_MAX_LLR_ABS ? CNU_MAX_LLR_ABS : *sumLLRV2C[i];
+			*sumLLRV2C[i] = *sumLLRV2C[i] < -CNU_MAX_LLR_ABS ?  -CNU_MAX_LLR_ABS : *sumLLRV2C[i];
+	#else
+			if(i!=idxMin1){
+				mC2V[i] = sgnLLR[i]^sgn ? -min1 : min1;
+			}
+			else{
+				mC2V[i] = sgnLLR[i]^sgn ? -min2 : min2;
+			}
+	#endif
+		
+		}
+	}
+
+}
+
+
+void QC_LDPC::VNU(int vIndex, int llr, int j){  
+
+	int sumLLRV2C = llr;
+	for(int i=0; i < baseH.size(); ++i){
+		if(baseH[i][j]>=0){
+			int cnIdx = i*CPM_SIZE +(CPM_SIZE+vIndex-baseH[i][j])%CPM_SIZE;		
+			int j2 = baseHOffsetJ[i][j];			
+			sumLLRV2C+= memC2V[cnIdx][j2];
+		}					 
+	 
+	}
+	
+//	sumLLRV2C = sumLLRV2C > MAX_LLR_ABS ?  MAX_LLR_ABS : sumLLRV2C;
+//	sumLLRV2C = sumLLRV2C < -MAX_LLR_ABS ?  -MAX_LLR_ABS : sumLLRV2C;
+	memSumLLRV2C[vIndex] = sumLLRV2C;
+	
+
+}
 

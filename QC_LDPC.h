@@ -33,6 +33,8 @@ public:
 
 	void minSumDecode(vector<float> & llr, vector<bool> & decoded);
 
+	void minSumDecode(vector<int> & llr, vector<bool> & decoded);
+
 	QC_LDPC();
 	~QC_LDPC();
 	int iterationCnt;
@@ -55,11 +57,18 @@ public:
 	
 
 	// decoding
-	void minSumCNU(vector<float*>& sumLLRV2C, vector<float> &mC2V, vector<bool> bitMsk);
+	
  	bool checkSumH(vector<bool> & cword);
+
 	void VNU(int vIndex, float llr, int j); 
-	vector< vector  <float> >  memC2V;
-	vector <float>   memSumLLRV2C;
+	void minSumCNU(vector<float*>& sumLLRV2C, vector<float> &mC2V, vector<bool> bitMsk);
+	vector< vector  <float> >  memC2V;	
+	vector <float>   memSumLLRV2C;	
+
+	void VNU(int vIndex, int llr, int j); 
+	void minSumCNU(vector<int*>& sumLLRV2C, vector<int> &mC2V, vector<bool> bitMsk);
+	vector< vector  <int> >  memC2V_i;
+	vector <int>   memSumLLRV2C_i;
 
 private:
 

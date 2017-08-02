@@ -240,6 +240,8 @@ void GC_RS_LDPC::parityCheckMatrixGen(){
 
 }
 
+
+
 void GC_RS_LDPC::interlacedMinsum(vector<float> & llr, vector<bool> &decoded){
 		
 	// initialize
@@ -338,6 +340,138 @@ void GC_RS_LDPC::interlacedMinsum(vector<float> & llr, vector<bool> &decoded){
 			}
  			++vnIdx;
 			}
+		}
+	/*	
+		if (itr > 10) {
+			cout << 10;
+			for (int i = 0; i < N; ++i) {
+				if (llr[i] * memSumLLRV2C[i] < 0) {
+					cout << i << "," << llr[i] << "," << memSumLLRV2C[i] << endl;
+				}
+			}
+		}*/
+		// parity check
+		if( checkSumH(cword)==false){
+			//cout << "early termination @ " << itr<< endl;
+			iterationCnt = itr+1;
+			break;
+		}
+
+	}
+
+	
+
+	// rearrange the data
+	decoded.resize(dataLength);
+	int startIdx = N-dataLength;
+	for(int j=0; j < dataLength; ++j){
+		decoded[j] = cword[columnPermIdx[j+startIdx]];
+	}
+
+}
+
+
+void GC_RS_LDPC::interlacedMinsum(vector<int> & llr, vector<bool> &decoded){
+		
+	// initialize
+
+	initDecoder();
+	memSumLLRV2C_i = llr;
+	vector<bool> cword(N);
+	//iterative decoding
+
+	iterationCnt = MAX_DECODE_ITERATION;
+
+	int CN_Enable = 0;
+	
+	for(int itr=0; itr < MAX_DECODE_ITERATION; ++itr){
+
+		CN_Enable = itr%2;
+		int iOffset = 0;
+		int cnIdx = 0;
+		for(int p=0;  p< BASE_MATRIX_P;++p){
+			
+			if(p%2 == CN_Enable){
+				
+				for(int i=0; i < baseHd1[p]; ++i){
+					for(int k=0; k < CPM_SIZE; ++k){
+						int vOffset =0;
+						vector<int *> sumLLRV2C;
+						vector<bool> bitMask;
+						for(int j = 0; j < nColBlockH; ++j){
+							if(baseH[iOffset+i][j]>=0){
+								int vnIdx = vOffset + (baseH[iOffset+i][j] + k)%CPM_SIZE;						 
+								sumLLRV2C.push_back(&memSumLLRV2C_i[vnIdx]);
+								bitMask.push_back(colMask[vnIdx]);
+							}
+							vOffset += CPM_SIZE;
+						}
+
+						if(!rowMask[cnIdx]){
+							minSumCNU(sumLLRV2C, memC2V_i[cnIdx],bitMask);
+						}
+						cnIdx++;
+					}// k
+				}//i
+				iOffset += baseHd1[p];				
+			} //if
+			else{
+				iOffset += baseHd1[p];
+				cnIdx += baseHd1[p]*CPM_SIZE;
+			}
+			
+		}// for p
+		
+
+		// global check node update
+		for(int i=nLocalRowBlk; i <baseH.size(); ++i ){
+			for(int k=0; k <CPM_SIZE; ++k){	
+				int vOffset = 0;
+				
+				vector<int *> sumLLRV2C;//(BASE_MATRIX_PxL);
+				vector<bool> bitMask;
+				for(int j=0; j < baseH[i].size(); ++j){
+					if(baseH[i][j]>=0){
+						int vnIdx = vOffset + (baseH[i][j] + k)%CPM_SIZE;
+						
+						sumLLRV2C.push_back(&memSumLLRV2C_i[vnIdx]);
+						bitMask.push_back(colMask[vnIdx]);
+						 
+						 
+					}
+					vOffset += CPM_SIZE;	
+				}
+				 
+				if(!rowMask[cnIdx]){
+					minSumCNU(sumLLRV2C, memC2V_i[cnIdx],bitMask);
+				}
+				++cnIdx;
+			}
+			
+		}
+		
+	
+		//var. node update (accumulation) and decode
+		int vnIdx = 0;
+		
+		for(int j=0; j <nColBlockH; ++j ){
+			for(int k = 0; k < CPM_SIZE; ++k){
+#ifndef ROW_SHUFFLE
+			if(!colMask[vnIdx])
+				VNU(vnIdx,llr[vnIdx],j);	
+#endif
+ 	
+			if(!colMask[vnIdx]){
+				cword[vnIdx] = (memSumLLRV2C_i[vnIdx]< 0);	
+			}
+			else{
+				cword[vnIdx] = 0;
+			}
+
+
+ 			++vnIdx;
+			}
+
 		}
 	/*	
 		if (itr > 10) {

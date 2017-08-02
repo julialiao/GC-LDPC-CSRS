@@ -11,6 +11,7 @@ public:
 	void parityCheckMatrixGen();
 	//decoding
 	void interlacedMinsum(vector<float> & llr, vector<bool> &decoded);
+	void interlacedMinsum(vector<int> & llr, vector<bool> &decoded);
 	
 	GC_RS_LDPC();
 	~GC_RS_LDPC();

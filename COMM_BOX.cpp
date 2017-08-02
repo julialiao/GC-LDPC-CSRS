@@ -156,6 +156,48 @@ void COMM_BOX::BPSK_DeMod(vector<float> & rx, vector<bool> &demod ){
 	}
 }
 
+void COMM_BOX:: hardInputGen(vector<float>& in,vector<int>& out, int qBit){
 
+	out.resize(in.size());
+	if(qBit==1){
+		for(int i=0; i < in.size(); ++i){
+			out[i] = (in[i]  >0) ? 7 : -7;
+		}
+	}
+	else if(qBit==2){
+		for(int i=0; i < in.size(); ++i){
+			float tmp = in[i]*8;
+			if(tmp > 0){
+				out[i] = tmp > 3.245 ? 5 :2;
+			}
+			else{
+				out[i] = tmp < -3.245 ? -5 :-2;
+			}
+		}
+	}
+	
+}
+
+void COMM_BOX:: softQBitGen(vector<float>& in,vector<float>& out, int qBit){
+
+	out.resize(in.size());
+	if(qBit==1){
+		for(int i=0; i < in.size(); ++i){
+			out[i] = (in[i]  >0) ? 1 : -1;
+		}
+	}
+	else if(qBit==2){
+		for(int i=0; i < in.size(); ++i){
+			float tmp = in[i]*8;
+			if(tmp > 0){
+				out[i] = tmp > 3.245 ? 5 :2;
+			}
+			else{
+				out[i] = tmp < -3.245 ? -5 :-2;
+			}
+		}
+	}
+	
+}
 
 

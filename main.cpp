@@ -55,9 +55,11 @@ int main() {
 
 	vector< float > iteratoinCnt;
 	
-	double vecSNR[10] =  { 3.6, 3.7,3.8, 3.9, 4, 4.1,4.2,4.3,4.4, 4.5};
+	//double vecSNR[8] = {4.0,4.1,4.2,4.3,4.4,4.5,4.6,4.7};
+	double vecSNR[8] = {3.6,3.7,3.8,3.9,4.0,4.1,4.2,4.3};
+	//double vecSNR[10] = {4.8,5,5.1,5.2,5.3,5.4,5.5,5.6,5.7,5.8};// { 3.8, 3.9, 4, 4.1,4.2,4.3};
 
-	for (int snrIdx = 0; snrIdx <10; snrIdx ++ ) {
+	for (int snrIdx = 0; snrIdx <8; snrIdx ++ ) {
 		double SNR = vecSNR[snrIdx] + 10*log10(rate);
 		cout << "SNR = " << SNR <<endl;
 		cout << "Eb/No = " << vecSNR[snrIdx] << endl;
@@ -98,11 +100,26 @@ int main() {
 			
 			vector<bool> decodedCodeword;
 
-#ifdef INTERLACED_MINSUM
-			gcLdpc.interlacedMinsum(rx, decodedCodeword);
+#ifdef FIX_POINT_EN
+			vector<int> rx_i;
+			commBox.hardInputGen(rx, rx_i, Q_BIT);
+	#ifdef INTERLACED_MINSUM
+			gcLdpc.interlacedMinsum(rx_i, decodedCodeword);
+	#else
+			gcLdpc.minSumDecode(rx_i, decodedCodeword);
+	#endif
 #else
+	#ifdef SOFT_Q_BIT  // quantized input, but soft decoding
+			commBox.softQBitGen(rx,rx,Q_BIT);
+	#endif
+	#ifdef INTERLACED_MINSUM
+			gcLdpc.interlacedMinsum(rx, decodedCodeword);
+	#else
 			gcLdpc.minSumDecode(rx, decodedCodeword);
+	#endif
 #endif
+
+
 
 			sumItrCnt += gcLdpc.iterationCnt;
 
